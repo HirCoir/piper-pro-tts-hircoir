@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar sesión - HirLab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+    <meta name="keywords" content="texto a voz, TTS, accesibilidad, productividad, herramientas de voz, HirLab, texto a voz, conversión de texto a voz, IA, Hircoir, herramienta de texto a voz">
+    <meta name="author" content="HirCoir">
+    <meta name="description" content="Inicia sesión en HirLab para acceder a herramientas avanzadas de conversión de texto a voz." />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ domain_url }}" />
+    <meta property="og:title" content="Iniciar sesión - HirLab" />
+    <meta property="og:description" content="Accede a herramientas avanzadas de conversión de texto a voz." />
+    <meta property="og:image" content="{{ url_for('og_image', _external=True) }}">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="{{ domain_url }}" />
+    <meta property="twitter:title" content="Iniciar sesión - HirLab" />
+    <meta property="twitter:description" content="Accede a herramientas avanzadas de conversión de texto a voz." />
+    <meta property="twitter:image" content="{{ url_for('og_image', _external=True) }}" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            900: '#111827',
+                            800: '#1f2937',
+                            700: '#374151',
+                            600: '#4b5563',
+                            500: '#6b7280',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #111827;
+            --text-color: #f9fafb;
+            --primary-color: #3b82f6;
+            --primary-hover-color: #2563eb;
+            --secondary-color: #1f2937;
+            --border-color: #374151;
+            --error-color: #ef4444;
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .input-field {
+            background-color: rgba(31, 41, 55, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            outline: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            color: white;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="container mx-auto px-4 py-6 flex-1 flex items-center justify-center">
+        <div class="w-full max-w-md">
+            <!-- Header -->
+            <header class="mb-8 text-center">
+                <div class="flex justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-bold gradient-text mb-2">Iniciar sesión</h1>
+                <p class="text-gray-400">Accede a tu cuenta de HirLab</p>
+            </header>
+
+            <!-- Login Form -->
+            <div class="card p-8">
+                {% if error %}
+                <div class="mb-6 bg-red-500/20 text-red-400 p-4 rounded-lg flex items-start">
+                    <i class="fas fa-exclamation-circle mt-1 mr-3"></i>
+                    <div>
+                        <p class="font-medium">{{ error }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="POST" class="space-y-6">
+                    <div class="space-y-2">
+                        <label for="username" class="block text-sm font-medium text-gray-300">Usuario</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-user text-gray-500"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="username" 
+                                name="username" 
+                                required
+                                class="input-field w-full pl-10 pr-4 py-3 rounded-lg"
+                                placeholder="Ingresa tu usuario">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="password" class="block text-sm font-medium text-gray-300">Contraseña</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-lock text-gray-500"></i>
+                            </div>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                required
+                                class="input-field w-full pl-10 pr-4 py-3 rounded-lg"
+                                placeholder="Ingresa tu contraseña">
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="btn-primary w-full py-3 rounded-lg font-medium">
+                            <span class="flex items-center justify-center space-x-2">
+                                <i class="fas fa-sign-in-alt"></i>
+                                <span>Iniciar sesión</span>
+                            </span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-gray-700 text-center">
+                    <p class="text-sm text-gray-400">
+                        ¿No tienes una cuenta? 
+                        <a href="#" class="text-blue-400 hover:text-blue-300 transition-colors">
+                            Contáctanos
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 py-4 border-t border-gray-700 mt-auto">
+        <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
+            <p>© 2025 HirCoir. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add loading state to form submission
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    if (submitButton) {
+                        const originalContent = submitButton.innerHTML;
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = `
+                            <div class="loading w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                            <span>Procesando...</span>
+                        `;
+                        
+                        // Revert after 5 seconds if page doesn't change (fallback)
+                        setTimeout(() => {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalContent;
+                        }, 5000);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

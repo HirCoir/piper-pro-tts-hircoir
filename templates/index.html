@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Texto a voz - HirLab</title>
+    <link rel="icon" href="{{ url_for('favicon') }}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+    <meta name="keywords" content="texto a voz, TTS, accesibilidad, productividad, herramientas de voz, HirLab, texto a voz, conversión de texto a voz, IA, Hircoir, herramienta de texto a voz, tts.hircoir.eu.org youtube.com/@hircoir, piper, free tts, free text to voice, convertir texto a voz gratis, free ai tts, texto a voz realista, tts realista, free tts, hircoir.eu.org, convertir texto a voz, hircoir project, https://github.com/HirCoir/Piper-TTS-Tools, como convertir texto a voz, text to spech, spech, de texto a voz, hircoir.site, www.hircoir.site, hircoir ai, hircoir IA">
+    <meta name="author" content="HirCoir">
+    <meta name="title" content="Texto a voz - HirLab" />
+    <meta name="description" content="Convierte gratuitamente texto a voz utilizando Ingeligencia Artificial." />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{ domain_url }}" />
+    <meta property="og:title" content="Texto a voz - HirLab" />
+    <meta property="og:description" content="Convierte gratuitamente texto a voz utilizando Ingeligencia Artificial." />
+    <meta property="og:image" content="{{ url_for('og_image', _external=True) }}">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="{{ domain_url }}" />
+    <meta property="twitter:title" content="Texto a voz - HirLab" />
+    <meta property="twitter:description" content="Convierte gratuitamente texto a voz utilizando Ingeligencia Artificial." />
+    <meta property="twitter:image" content="{{ url_for('og_image', _external=True) }}" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        dark: {
+                            900: '#111827',
+                            800: '#1f2937',
+                            700: '#374151',
+                            600: '#4b5563',
+                            500: '#6b7280',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Custom CSS */
+        :root {
+            --bg-color: #111827;
+            --text-color: #f9fafb;
+            --primary-color: #3b82f6;
+            --primary-hover-color: #2563eb;
+            --secondary-color: #1f2937;
+            --border-color: #374151;
+            --safe-area-inset-top: env(safe-area-inset-top);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--safe-area-inset-top);
+            padding-bottom: var(--safe-area-inset-bottom);
+        }
+
+        /* Smooth transitions */
+        * {
+            transition: all 0.2s ease;
+        }
+
+        /* Header styles */
+        .header {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(31, 41, 55, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Card styles */
+        .card {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Input styles */
+        .input-field {
+            background-color: rgba(31, 41, 55, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            outline: none;
+        }
+
+        /* Button styles */
+        .btn-primary {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            color: white;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Model selector */
+        .model-selector {
+            background-color: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .model-card {
+            background-color: rgba(31, 41, 55, 0.7);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: var(--primary-color);
+        }
+
+        .model-card.selected {
+            border-color: var(--primary-color);
+            background: linear-gradient(45deg, rgba(31, 41, 55, 0.9), rgba(59, 130, 246, 0.2));
+        }
+
+        /* Modal styles */
+        .modal {
+            background-color: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Loading animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+        }
+
+        /* Audio player customization */
+        audio {
+            width: 100%;
+            border-radius: 0.75rem;
+        }
+
+        audio::-webkit-media-controls-panel {
+            background-color: var(--secondary-color);
+            border-radius: 0.75rem;
+        }
+
+        /* Textarea styles */
+        textarea {
+            min-height: 150px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0.75rem 1rem;
+            }
+
+            textarea {
+                min-height: 120px;
+                font-size: 16px;
+            }
+
+            .model-card img {
+                height: 100px;
+            }
+
+            .model-selector-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+        }
+
+        /* Desktop enhancements */
+        @media (min-width: 1024px) {
+            .model-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+
+            textarea {
+                min-height: 200px;
+            }
+        }
+
+        /* Model preview in button */
+        .model-preview {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .model-preview-img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="container mx-auto px-4 py-6 flex-1">
+        <!-- Header -->
+        <header class="header rounded-xl mb-8 p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <h1 class="text-2xl font-bold gradient-text">Convertidor de Texto a Voz</h1>
+            </div>
+
+            <div class="dropdown relative">
+                {% if session.username %}
+                <button class="Btn relative flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg hover:shadow-xl transition-all" onclick="toggleDropdown()">
+                    <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 576 512">
+                        <path d="M309 106c11.4-7 19-19.7 19-34c0-22.1-17.9-40-40-40s-40 17.9-40 40c0 14.4 7.6 27 19 34L209.7 220.6c-9.1 18.2-32.7 23.4-48.6 10.7L72 160c5-6.7 8-15 8-24c0-22.1-17.9-40-40-40S0 113.9 0 136s17.9 40 40 40c.2 0 .5 0 .7 0L86.4 427.4c5.5 30.4 32 52.6 63 52.6H426.6c30.9 0 57.4-22.1 63-52.6L535.3 176c.2 0 .5 0 .7 0c22.1 0 40-17.9 40-40s-17.9-40-40-40s-40 17.9-40 40c0 9 3 17.3 8 24l-89.1 71.3c-15.9 12.7-39.5 7.5-48.6-10.7L309 106z"></path>
+                    </svg>
+                    <span class="tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 pointer-events-none transition-all">Premium</span>
+                </button>
+                {% else %}
+                <!-- Botón que abre el menú -->
+                <button onclick="toggleDropdown()" class="btn-primary px-4 py-2 rounded-lg font-medium flex items-center space-x-2">
+                    <i class="fas fa-bars"></i>
+                    <span>Menú</span>
+                </button>
+                {% endif %}
+
+                <div id="myDropdown" class="dropdown-content absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl z-50 hidden border border-gray-700">
+                    {% if session.username %}
+                        <a href="{{ url_for('logout') }}" class="block px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors rounded-t-lg flex items-center space-x-2">
+                            <i class="fas fa-sign-out-alt w-5"></i>
+                            <span>Cerrar sesión ({{ session.username }})</span>
+                        </a>
+                    {% else %}
+                        {# Este es el enlace de Login solicitado #}
+                        <a href="{{ url_for('login') }}" class="block px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors rounded-t-lg flex items-center space-x-2">
+                            <i class="fas fa-sign-in-alt w-5"></i>
+                            <span>Login</span>
+                        </a>
+                        {# Eliminamos el enlace redundante a /login #}
+                        <!-- <a href="/login" class="block px-4 py-3 text-sm text-gray-200 hover:bg-gray-700 transition-colors flex items-center space-x-2">
+                            <i class="fas fa-star w-5"></i>
+                            <span>Acceso prioritario</span>
+                        </a> -->
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="space-y-6">
+            <!-- Conversion Form -->
+            <form id="conversion-form" class="space-y-6">
+                <!-- Model Selection -->
+                <div class="space-y-2">
+                    <label for="model" class="block text-sm font-medium text-gray-300">Modelo de voz</label>
+                    <button type="button" id="open-model-selector" class="btn-primary w-full py-3 rounded-lg flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" viewBox="0 0 512 512" fill="currentColor">
+                            <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm50.7-186.9L162.4 380.6c-19.4 7.5-38.5-11.6-31-31l55.5-144.3c3.3-8.5 9.9-15.1 18.4-18.4l144.3-55.5c19.4-7.5 38.5 11.6 31 31L325.1 306.7c-3.2 8.5-9.9 15.1-18.4 18.4zM288 256a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"></path>
+                        </svg>
+                        <span>Seleccionar modelo</span>
+                    </button>
+                    <input type="hidden" id="selected-model" name="model" value="">
+                </div>
+
+                <!-- Text Input -->
+                <div class="space-y-2">
+                    <label for="text" class="block text-sm font-medium text-gray-300">Texto a convertir</label>
+                    <textarea id="text" name="text" rows="6" {% if not session.username %}maxlength="2000"{% endif %}
+                        class="input-field w-full px-4 py-3 rounded-lg autosize"
+                        placeholder="Escribe o pega el texto que deseas convertir a voz..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button type="submit" id="submit-button" class="btn-primary w-full py-3 rounded-lg font-medium">
+                        <span class="button-content flex items-center justify-center space-x-2">
+                            <i class="fas fa-play"></i>
+                            <span>Generar audio</span>
+                        </span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Audio Output -->
+            <div id="audio-container" class="card p-4 hidden">
+                <h2 class="text-lg font-semibold mb-3 text-gray-300">Audio generado</h2>
+                <div class="flex justify-center">
+                    <audio controls class="w-full max-w-md"></audio>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Model Selection Modal -->
+    <div id="model-selector" class="model-selector fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="model-selector-content relative max-w-4xl mx-auto my-8 p-6 rounded-xl">
+            <button onclick="closeModelSelector()" class="close-button absolute right-4 top-4 w-10 h-10 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <div class="space-y-4">
+                <h2 class="text-2xl font-bold text-gray-100">Selecciona un modelo de voz</h2>
+                <p class="text-gray-400">Elige el modelo que mejor se adapte a tus necesidades</p>
+
+                <input type="text" id="model-search" placeholder="Buscar modelos..."
+                    class="input-field w-full px-4 py-3 rounded-lg">
+
+                <div class="model-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% for model in model_options %}
+                    <div class="model-card p-4 rounded-lg cursor-pointer"
+                        data-model-id="{{ model.id }}"
+                        data-model-name="{{ model.name }}"
+                        data-model-description="{{ model.description }}"
+                        data-model-language="{{ model.language }}"
+                        data-model-image="{{ model.image }}">
+                        <img src="{{ model.image }}" alt="{{ model.name }}" class="w-full h-56 object-cover rounded-lg mb-3">
+                        <div class="space-y-1">
+                            <h3 class="font-semibold text-gray-100">{{ model.name }}</h3>
+                            <p class="text-sm text-gray-400">{{ model.description }}</p>
+                            <div class="flex items-center text-xs text-gray-500">
+                                <i class="fas fa-language mr-1"></i>
+                                <span>{{ model.language }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning Modal -->
+    <div id="warning-modal" class="modal fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 border border-gray-700">
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-exclamation-triangle text-blue-500 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-100">Selecciona un modelo</h3>
+                <p class="text-gray-400">Por favor, selecciona un modelo de voz antes de generar el audio.</p>
+                <button onclick="closeWarningModal()" class="btn-primary px-6 py-2 rounded-lg w-full">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rate Limit Modal -->
+    <div id="rate-limit-modal" class="modal fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 border border-gray-700">
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                    <i class="fas fa-clock text-red-500 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-100">Límite de uso</h3>
+                <p class="text-gray-400">Has superado el límite de uso. Por favor, espera unos minutos e inténtalo de nuevo.</p>
+                <button onclick="closeRateLimitModal()" class="btn-primary px-6 py-2 rounded-lg w-full">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 py-4 border-t border-gray-700 mt-8">
+        <div class="container mx-auto px-4 text-center text-gray-400 text-sm">
+            <p>© 2025 HirCoir. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Autosize library -->
+    <script>
+        !function(e,t){if("function"==typeof define&&define.amd)define(["module","exports"],t);else if("undefined"!=typeof exports)t(module,exports);else{var n={exports:{}};t(n,n.exports),e.autosize=n.exports}}(this,function(e,t){"use strict";var n,o,p="function"==typeof Map?new Map:(n=[],o=[],{has:function(e){return-1<n.indexOf(e)},get:function(e){return o[n.indexOf(e)]},set:function(e,t){-1===n.indexOf(e)&&(n.push(e),o.push(t))},delete:function(e){var t=n.indexOf(e);-1<t&&(n.splice(t,1),o.splice(t,1))}}),c=function(e){return new Event(e,{bubbles:!0})};try{new Event("test")}catch(e){c=function(e){var t=document.createEvent("Event");return t.initEvent(e,!0,!1),t}}function r(r){if(r&&r.nodeName&&"TEXTAREA"===r.nodeName&&!p.has(r)){var e,n=null,o=null,i=null,d=function(){r.clientWidth!==o&&a()},l=function(t){window.removeEventListener("resize",d,!1),r.removeEventListener("input",a,!1),r.removeEventListener("keyup",a,!1),r.removeEventListener("autosize:destroy",l,!1),r.removeEventListener("autosize:update",a,!1),Object.keys(t).forEach(function(e){r.style[e]=t[e]}),p.delete(r)}.bind(r,{height:r.style.height,resize:r.style.resize,overflowY:r.style.overflowY,overflowX:r.style.overflowX,wordWrap:r.style.wordWrap});r.addEventListener("autosize:destroy",l,!1),"onpropertychange"in r&&"oninput"in r&&r.addEventListener("keyup",a,!1),window.addEventListener("resize",d,!1),r.addEventListener("input",a,!1),r.addEventListener("autosize:update",a,!1),r.style.overflowX="hidden",r.style.wordWrap="break-word",p.set(r,{destroy:l,update:a}),"vertical"===(e=window.getComputedStyle(r,null)).resize?r.style.resize="none":"both"===e.resize&&(r.style.resize="horizontal"),n="content-box"===e.boxSizing?-(parseFloat(e.paddingTop)+parseFloat(e.paddingBottom)):parseFloat(e.borderTopWidth)+parseFloat(e.borderBottomWidth),isNaN(n)&&(n=0),a()}function s(e){var t=r.style.width;r.style.width="0px",r.offsetWidth,r.style.width=t,r.style.overflowY=e}function u(){if(0!==r.scrollHeight){var e=function(e){for(var t=[];e&&e.parentNode&&e.parentNode instanceof Element;)e.parentNode.scrollTop&&t.push({node:e.parentNode,scrollTop:e.parentNode.scrollTop}),e=e.parentNode;return t}(r),t=document.documentElement&&document.documentElement.scrollTop;r.style.height="",r.style.height=r.scrollHeight+n+"px",o=r.clientWidth,e.forEach(function(e){e.node.scrollTop=e.scrollTop}),t&&(document.documentElement.scrollTop=t)}}function a(){u();var e=Math.round(parseFloat(r.style.height)),t=window.getComputedStyle(r,null),n="content-box"===t.boxSizing?Math.round(parseFloat(t.height)):r.offsetHeight;if(n<e?"hidden"===t.overflowY&&(s("scroll"),u(),n="content-box"===t.boxSizing?Math.round(parseFloat(window.getComputedStyle(r,null).height)):r.offsetHeight):"hidden"!==t.overflowY&&(s("hidden"),u(),n="content-box"===t.boxSizing?Math.round(parseFloat(window.getComputedStyle(r,null).height)):r.offsetHeight),i!==n){i=n;var o=c("autosize:resized");try{r.dispatchEvent(o)}catch(e){}}}}function i(e){var t=p.get(e);t&&t.destroy()}function d(e){var t=p.get(e);t&&t.update()}var l=null;"undefined"==typeof window||"function"!=typeof window.getComputedStyle?((l=function(e){return e}).destroy=function(e){return e},l.update=function(e){return e}):((l=function(e,t){return e&&Array.prototype.forEach.call(e.length?e:[e],function(e){return r(e)}),e}).destroy=function(e){return e&&Array.prototype.forEach.call(e.length?e:[e],i),e},l.update=function(e){return e&&Array.prototype.forEach.call.call(e.length?e:[e],d),e}),t.default=l,e.exports=t.default});
+    </script>
+
+    <!-- Main JavaScript -->
+    <script>
+        // Función para alternar la visibilidad del menú desplegable
+        function toggleDropdown() {
+            document.getElementById("myDropdown").classList.toggle("hidden");
+        }
+
+        // Cerrar el menú si el usuario hace clic fuera de él
+        window.onclick = function(event) {
+            if (!event.target.closest('.dropdown')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (!openDropdown.classList.contains('hidden')) {
+                        openDropdown.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const modelCards = document.querySelectorAll('.model-card');
+            const selectedModelInput = document.getElementById('selected-model');
+            const modelSelector = document.getElementById('model-selector');
+            const openModelSelectorBtn = document.getElementById('open-model-selector');
+            const modelSearch = document.getElementById('model-search');
+            const form = document.getElementById('conversion-form');
+            const submitButton = document.getElementById('submit-button');
+            const warningModal = document.getElementById('warning-modal');
+            const rateLimitModal = document.getElementById('rate-limit-modal');
+            const audioContainer = document.getElementById('audio-container');
+            const textarea = document.getElementById('text'); // Referencia al textarea
+
+            const localStorageKey = 'hirlabTtsTextContent'; // Clave para localStorage
+
+            // Cargar texto guardado de localStorage al cargar la página
+            const savedText = localStorage.getItem(localStorageKey);
+            if (savedText) {
+                textarea.value = savedText;
+            }
+
+            // Guardar texto en localStorage cada vez que cambia
+            textarea.addEventListener('input', function() {
+                localStorage.setItem(localStorageKey, textarea.value);
+            });
+
+            // Inicializar autosize para textareas
+            autosize(document.querySelectorAll('.autosize'));
+
+
+            // Model selector functionality
+            openModelSelectorBtn.addEventListener('click', function() {
+                modelSelector.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            });
+
+            function closeModelSelector() {
+                modelSelector.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            function showWarningModal() {
+                warningModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeWarningModal() {
+                warningModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            function showRateLimitModal() {
+                rateLimitModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeRateLimitModal() {
+                rateLimitModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            // Expose functions to window for onclick handlers
+            window.closeModelSelector = closeModelSelector;
+            window.showWarningModal = showWarningModal;
+            window.closeWarningModal = closeWarningModal;
+            window.showRateLimitModal = showRateLimitModal;
+            window.closeRateLimitModal = closeRateLimitModal;
+            window.toggleDropdown = toggleDropdown; // Exponer la función toggleDropdown
+
+            // Handle model selection
+            modelCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const modelId = this.dataset.modelId;
+                    const modelName = this.dataset.modelName;
+                    const modelImage = this.querySelector('img').src;
+
+                    selectedModelInput.value = modelId;
+
+                    // Update button with selected model
+                    openModelSelectorBtn.innerHTML = `
+                        <div class="model-preview">
+                            <img src="${modelImage}" alt="${modelName}" class="model-preview-img">
+                            <span>${modelName}</span>
+                        </div>
+                    `;
+
+                    closeModelSelector();
+                });
+            });
+
+            // Filter models on search
+            if (modelSearch) {
+                modelSearch.addEventListener('input', function() {
+                    const searchTerm = this.value.toLowerCase();
+
+                    modelCards.forEach(card => {
+                        const modelName = card.dataset.modelName.toLowerCase();
+                        const modelDesc = card.dataset.modelDescription.toLowerCase(); // Corregido dataset key
+                        const modelLang = card.dataset.modelLanguage.toLowerCase();   // Corregido dataset key
+
+                        if (modelName.includes(searchTerm) ||
+                            modelDesc.includes(searchTerm) ||
+                            modelLang.includes(searchTerm)) {
+                            card.style.display = '';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            // Form submission
+            if (form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    if (!selectedModelInput.value) {
+                        showWarningModal();
+                        return;
+                    }
+
+                    const buttonContent = submitButton.querySelector('.button-content');
+                    const originalText = buttonContent.innerHTML;
+
+                    submitButton.disabled = true;
+                    buttonContent.innerHTML = `
+                        <div class="loading w-5 h-5"></div>
+                        <span>Generando...</span>
+                    `;
+
+                    const formData = new FormData(e.target);
+                    // const textLength = formData.get('text').length; // No necesitas la longitud aquí
+
+                    try {
+                        const response = await fetch('/convert', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            // Verificar si es una tarea asíncrona (textos grandes)
+                            if (data.task_id) {
+                                // Mostrar contenedor de progreso
+                                audioContainer.classList.remove('hidden');
+                                audioContainer.innerHTML = `
+                                    <h2 class="text-lg font-semibold mb-3 text-gray-300">Procesando texto largo</h2>
+                                    <div class="w-full bg-gray-700 rounded-full h-4 mb-4">
+                                        <div id="progress-bar" class="bg-blue-500 h-4 rounded-full" style="width: 0%"></div>
+                                    </div>
+                                    <p id="progress-text" class="text-sm text-gray-400 text-center">Iniciando procesamiento...</p>
+                                `;
+
+                                // Iniciar polling para verificar estado
+                                pollTaskStatus(data.task_id);
+
+                                // Limpiar texto de localStorage si es una tarea asíncrona (generalmente textos más largos)
+                                // Esto es un ajuste. Podrías decidir limpiar solo al completar,
+                                // pero si el texto es largo y se procesa en segundo plano,
+                                // quizás quieras empezar a escribir el siguiente texto.
+                                localStorage.removeItem(localStorageKey);
+
+                            } else if (data.audio_base64) {
+                                // Procesamiento síncrono completado
+                                showAudioPlayer(data.audio_base64);
+
+                                // Limpiar texto de localStorage en procesamiento síncrono exitoso
+                                localStorage.removeItem(localStorageKey);
+
+                            } else {
+                                // Respuesta OK pero sin task_id ni audio_base64 (manejar posibles otros tipos de respuesta si existen)
+                                throw new Error('Respuesta exitosa pero sin audio/tarea');
+                            }
+                        } else {
+                             // Manejar errores de respuesta HTTP (e.g., 400, 429, 500)
+                            if (data.modal === 'rate_limit') { // Asegúrate que tu backend envía { modal: 'rate_limit' } para esto
+                                showRateLimitModal();
+                            } else {
+                                // Mensaje de error general o desde el backend
+                                const errorMessageText = data.error || 'Ocurrió un error en la conversión';
+                                audioContainer.classList.remove('hidden');
+                                audioContainer.innerHTML = `
+                                    <div class="bg-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                                        <i class="fas fa-exclamation-circle mr-2"></i>
+                                        ${errorMessageText}
+                                    </div>
+                                `;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error en la solicitud fetch:', error);
+                        // Mostrar mensaje de error general
+                        audioContainer.classList.remove('hidden');
+                        audioContainer.innerHTML = `
+                            <div class="bg-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                                <i class="fas fa-exclamation-circle mr-2"></i>
+                                Ocurrió un error de conexión o inesperado. Por favor, intenta nuevamente.
+                            </div>
+                        `;
+                    } finally {
+                        // Restore button state
+                        submitButton.disabled = false;
+                        buttonContent.innerHTML = originalText;
+                    }
+                });
+            }
+
+            // Función para mostrar el reproductor de audio
+            function showAudioPlayer(audioBase64) {
+                // Show audio container if hidden
+                audioContainer.classList.remove('hidden');
+
+                // Crear contenido del reproductor
+                audioContainer.innerHTML = `
+                    <h2 class="text-lg font-semibold mb-3 text-gray-300">Audio generado</h2>
+                    <div class="flex justify-center">
+                        <audio controls class="w-full max-w-md" src="data:audio/wav;base64,${audioBase64}"></audio>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2 text-center">El audio se eliminará automáticamente después de un tiempo</p>
+                `;
+
+                // Obtener el elemento de audio y configurar reproducción automática
+                const audioElement = audioContainer.querySelector('audio');
+
+                // Scroll to audio player
+                audioContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Try autoplay
+                try {
+                    audioElement.play();
+                } catch (playError) {
+                    console.log('Reproducción automática no permitida');
+                }
+            }
+
+            // Función para verificar el estado de una tarea asíncrona
+            async function pollTaskStatus(taskId) {
+                try {
+                    const response = await fetch(`/task/${taskId}`);
+                    const data = await response.json();
+
+                    const progressBar = document.getElementById('progress-bar');
+                    const progressText = document.getElementById('progress-text');
+
+                    if (response.ok) {
+                        if (data.status === 'completed') {
+                            // Tarea completada, mostrar reproductor de audio
+                            showAudioPlayer(data.audio_base64);
+                            // Asegúrate de limpiar localStorage aquí si no lo limpiaste al inicio
+                            // localStorage.removeItem(localStorageKey); // Depende de tu flujo deseado
+                        } else if (data.status === 'error') {
+                            // Error en la tarea
+                             const errorMessageText = data.error || 'Ocurrió un error al procesar el texto largo';
+                            audioContainer.innerHTML = `
+                                <div class="bg-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                                    <i class="fas fa-exclamation-circle mr-2"></i>
+                                    Error: ${errorMessageText}
+                                </div>
+                            `;
+                             // Podrías querer restaurar el texto si hubo un error en la tarea asíncrona
+                             const lastSavedText = localStorage.getItem(localStorageKey);
+                             if (lastSavedText) {
+                                textarea.value = lastSavedText;
+                                autosize.update(textarea); // Actualizar autosize si restauras texto
+                             }
+
+
+                        } else {
+                            // Actualizar progreso
+                            if (progressBar && progressText) {
+                                progressBar.style.width = `${data.progress}%`;
+                                progressText.textContent = `Procesando... ${Math.round(data.progress)}%`;
+
+                                // Continuar verificando estado
+                                setTimeout(() => pollTaskStatus(taskId), 2000);
+                            }
+                        }
+                    } else {
+                         // Error HTTP al hacer polling
+                         const errorMessageText = data.error || 'Error al verificar estado de la tarea';
+                         audioContainer.innerHTML = `
+                            <div class="bg-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                                <i class="fas fa-exclamation-circle mr-2"></i>
+                                Error: ${errorMessageText}. Intenta generar de nuevo.
+                            </div>
+                        `;
+                          // Podrías querer restaurar el texto si hubo un error grave en el polling
+                         const lastSavedText = localStorage.getItem(localStorageKey);
+                         if (lastSavedText) {
+                            textarea.value = lastSavedText;
+                            autosize.update(textarea);
+                         }
+                    }
+                } catch (error) {
+                    console.error('Error en el polling:', error);
+                    audioContainer.innerHTML = `
+                        <div class="bg-red-500/20 text-red-400 p-3 rounded-lg text-sm">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            Ocurrió un error inesperado durante el procesamiento. Por favor, intenta generar de nuevo.
+                        </div>
+                    `;
+                    // Podrías querer restaurar el texto si hubo un error grave
+                    const lastSavedText = localStorage.getItem(localStorageKey);
+                    if (lastSavedText) {
+                       textarea.value = lastSavedText;
+                       autosize.update(textarea);
+                    }
+                } finally {
+                     // El botón de submit ya se habilita al completarse o fallar la tarea
+                     // No es necesario deshabilitarlo durante el polling
+                }
+            }
+        });
+    </script>
+</body>
+</html>
