@@ -15,7 +15,6 @@ import math
 from werkzeug.middleware.proxy_fix import ProxyFix
 import io
 from dotenv import load_dotenv
-from PIL import Image, ImageOps
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -1046,54 +1045,13 @@ def security_check(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Función para convertir imagen a base64 con compresión optimizada
-def image_to_base64(image_path, max_width=200, max_height=200, quality=85):
-    """
-    Convierte imagen a base64 con compresión y redimensionado para carga rápida.
-    
-    Args:
-        image_path (str): Ruta a la imagen
-        max_width (int): Ancho máximo en píxeles
-        max_height (int): Alto máximo en píxeles
-        quality (int): Calidad JPEG (1-100)
-    
-    Returns:
-        str: Imagen en formato base64 optimizada o None si hay error
-    """
+# Función para convertir imagen a base64
+def image_to_base64(image_path):
     try:
-        if not os.path.exists(image_path):
-            return None
-            
-        with Image.open(image_path) as img:
-            # Convertir a RGB si es necesario (para JPEG)
-            if img.mode in ('RGBA', 'LA', 'P'):
-                # Crear fondo blanco para transparencias
-                background = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-                img = background
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
-            
-            # Redimensionar manteniendo proporción
-            img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
-            
-            # Comprimir y convertir a base64
-            buffer = io.BytesIO()
-            img.save(buffer, format='JPEG', quality=quality, optimize=True)
-            img_data = buffer.getvalue()
-            
-            # Log del tamaño optimizado
-            original_size = os.path.getsize(image_path)
-            compressed_size = len(img_data)
-            compression_ratio = (1 - compressed_size / original_size) * 100
-            logging.debug(f"Image optimized: {os.path.basename(image_path)} - "
-                         f"Original: {original_size} bytes, Compressed: {compressed_size} bytes "
-                         f"({compression_ratio:.1f}% reduction)")
-            
-            return base64.b64encode(img_data).decode('utf-8')
-            
+        if os.path.exists(image_path):
+            with open(image_path, 'rb') as img_file:
+                return base64.b64encode(img_file.read()).decode('utf-8')
+        return None
     except Exception as e:
         logging.error(f"Error converting image to base64: {e}")
         return None
