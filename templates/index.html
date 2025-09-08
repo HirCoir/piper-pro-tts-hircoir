@@ -194,6 +194,57 @@
             border-top-color: white;
         }
 
+        /* Model loading states */
+        .model-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            background-color: rgba(31, 41, 55, 0.5);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .model-image-placeholder {
+            width: 100%;
+            height: 224px;
+            background: linear-gradient(45deg, #374151, #4b5563);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-image-placeholder::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .model-image {
+            transition: opacity 0.3s ease;
+        }
+
+        .model-image.loading {
+            opacity: 0;
+        }
+
+        .model-image.loaded {
+            opacity: 1;
+        }
+
         /* Audio player customization */
         audio {
             width: 100%;
@@ -367,7 +418,16 @@
                 <input type="text" id="model-search" placeholder="Buscar modelos..."
                     class="input-field w-full px-4 py-3 rounded-lg">
 
-                <div class="model-grid grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Loading message -->
+                <div id="models-loading" class="model-loading">
+                    <div class="text-center space-y-3">
+                        <div class="loading w-8 h-8 mx-auto"></div>
+                        <p class="text-gray-300 font-medium">Obteniendo datos de los modelos...</p>
+                        <p class="text-gray-400 text-sm">Las imágenes se cargarán progresivamente</p>
+                    </div>
+                </div>
+
+                <div id="model-grid" class="model-grid grid grid-cols-1 sm:grid-cols-2 gap-4 hidden">
                     {% for model in model_options %}
                     <div class="model-card p-4 rounded-lg cursor-pointer"
                         data-model-id="{{ model.id }}"
@@ -375,7 +435,14 @@
                         data-model-description="{{ model.description }}"
                         data-model-language="{{ model.language }}"
                         data-model-image="{{ model.image }}">
-                        <img src="{{ model.image }}" alt="{{ model.name }}" class="w-full h-56 object-cover rounded-lg mb-3">
+                        <div class="model-image-container relative">
+                            <div class="model-image-placeholder">
+                                <i class="fas fa-image text-gray-500 text-2xl"></i>
+                            </div>
+                            <img class="model-image loading w-full h-56 object-cover rounded-lg mb-3 absolute top-0 left-0" 
+                                 alt="{{ model.name }}" 
+                                 style="display: none;">
+                        </div>
                         <div class="space-y-1">
                             <h3 class="font-semibold text-gray-100">{{ model.name }}</h3>
                             <p class="text-sm text-gray-400">{{ model.description }}</p>
@@ -467,8 +534,56 @@
             const rateLimitModal = document.getElementById('rate-limit-modal');
             const audioContainer = document.getElementById('audio-container');
             const textarea = document.getElementById('text'); // Referencia al textarea
+            const modelsLoading = document.getElementById('models-loading');
+            const modelGrid = document.getElementById('model-grid');
 
             const localStorageKey = 'hirlabTtsTextContent'; // Clave para localStorage
+
+            // Progressive image loading
+            let loadedImages = 0;
+            const totalImages = modelCards.length;
+            let loadingStarted = false;
+
+            function startProgressiveLoading() {
+                if (loadingStarted) return;
+                loadingStarted = true;
+
+                // Show model grid immediately
+                setTimeout(() => {
+                    modelsLoading.classList.add('hidden');
+                    modelGrid.classList.remove('hidden');
+                }, 500);
+
+                // Load images progressively with staggered timing
+                modelCards.forEach((card, index) => {
+                    const img = card.querySelector('.model-image');
+                    const placeholder = card.querySelector('.model-image-placeholder');
+                    const imageUrl = card.dataset.modelImage;
+
+                    if (imageUrl && imageUrl.startsWith('data:image/')) {
+                        // Stagger image loading to prevent UI freeze
+                        setTimeout(() => {
+                            img.src = imageUrl;
+                            img.onload = function() {
+                                img.style.display = 'block';
+                                img.classList.remove('loading');
+                                img.classList.add('loaded');
+                                placeholder.style.display = 'none';
+                                loadedImages++;
+                            };
+                            img.onerror = function() {
+                                // Keep placeholder if image fails to load
+                                placeholder.innerHTML = '<i class="fas fa-exclamation-triangle text-gray-500 text-xl"></i>';
+                                loadedImages++;
+                            };
+                        }, index * 100); // 100ms delay between each image
+                    } else {
+                        // No image available, show default icon
+                        placeholder.innerHTML = '<i class="fas fa-user text-gray-500 text-2xl"></i>';
+                        loadedImages++;
+                    }
+                });
+            }
 
             // Cargar texto guardado de localStorage al cargar la página
             const savedText = localStorage.getItem(localStorageKey);
@@ -489,6 +604,8 @@
             openModelSelectorBtn.addEventListener('click', function() {
                 modelSelector.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
+                // Start progressive loading when modal opens
+                startProgressiveLoading();
             });
 
             function closeModelSelector() {
