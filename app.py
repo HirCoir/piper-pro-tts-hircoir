@@ -15,6 +15,8 @@ import math
 from werkzeug.middleware.proxy_fix import ProxyFix
 import io
 from dotenv import load_dotenv
+from PIL import Image
+import io as image_io
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -142,6 +144,17 @@ def load_models():
                         if model_replacements and isinstance(model_replacements[0], list):
                             model_replacements = [tuple(item) for item in model_replacements]
                         
+                        # Optimize model image if present
+                        original_image = modelcard.get('image')
+                        optimized_image = None
+                        if original_image:
+                            optimized_image = optimize_image_base64(original_image)
+                            if optimized_image:
+                                logging.info(f"Optimized image for model {json_model_id}")
+                            else:
+                                logging.warning(f"Failed to optimize image for model {json_model_id}, using original")
+                                optimized_image = original_image
+                        
                         model_config = {
                             "model_path_onnx": onnx_path,
                             "replacements": model_replacements,
@@ -151,7 +164,7 @@ def load_models():
                             "language": modelcard.get('language', 'Not available'),
                             "voiceprompt": modelcard.get('voiceprompt', 'Not available'),
                             "filename_key": model_filename_key,
-                            "image": modelcard.get('image')  # Get base64 image from modelcard if present
+                            "image": optimized_image  # Use optimized image
                         }
                         
                         # Store model config using filename-based key
@@ -1045,12 +1058,93 @@ def security_check(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Función para convertir imagen a base64
+# Configuración para optimización de imágenes
+IMAGE_MAX_WIDTH = 150  # Ancho máximo para imágenes de modelos
+IMAGE_MAX_HEIGHT = 150  # Alto máximo para imágenes de modelos
+IMAGE_QUALITY = 75  # Calidad JPEG (1-100, menor = más compresión)
+
+def optimize_image_base64(image_data_or_path, max_width=IMAGE_MAX_WIDTH, max_height=IMAGE_MAX_HEIGHT, quality=IMAGE_QUALITY):
+    """
+    Optimiza una imagen reduciéndola de tamaño y comprimiéndola para carga más rápida.
+    
+    Args:
+        image_data_or_path: Datos base64 de imagen o ruta al archivo
+        max_width: Ancho máximo en píxeles
+        max_height: Alto máximo en píxeles  
+        quality: Calidad JPEG (1-100)
+    
+    Returns:
+        str: Imagen optimizada en base64 o None si hay error
+    """
+    try:
+        # Determinar si es base64 o ruta de archivo
+        if isinstance(image_data_or_path, str) and os.path.exists(image_data_or_path):
+            # Es una ruta de archivo
+            with open(image_data_or_path, 'rb') as img_file:
+                image_data = img_file.read()
+        elif isinstance(image_data_or_path, str) and image_data_or_path.startswith('data:image'):
+            # Es base64 con prefijo data:image
+            image_data = base64.b64decode(image_data_or_path.split(',')[1])
+        elif isinstance(image_data_or_path, str):
+            # Es base64 sin prefijo
+            image_data = base64.b64decode(image_data_or_path)
+        else:
+            return None
+        
+        # Abrir imagen con PIL
+        img = Image.open(image_io.BytesIO(image_data))
+        
+        # Convertir a RGB si es necesario (para JPEG)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            # Crear fondo blanco para transparencias
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Calcular nuevas dimensiones manteniendo proporción
+        original_width, original_height = img.size
+        
+        # Solo redimensionar si la imagen es más grande que los límites
+        if original_width > max_width or original_height > max_height:
+            # Calcular ratio para mantener proporción
+            width_ratio = max_width / original_width
+            height_ratio = max_height / original_height
+            ratio = min(width_ratio, height_ratio)
+            
+            new_width = int(original_width * ratio)
+            new_height = int(original_height * ratio)
+            
+            # Redimensionar con alta calidad
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            logging.debug(f"Image resized from {original_width}x{original_height} to {new_width}x{new_height}")
+        
+        # Comprimir y convertir a base64
+        output_buffer = image_io.BytesIO()
+        img.save(output_buffer, format='JPEG', quality=quality, optimize=True)
+        
+        # Calcular reducción de tamaño
+        original_size = len(image_data)
+        optimized_size = len(output_buffer.getvalue())
+        reduction_percent = ((original_size - optimized_size) / original_size) * 100
+        
+        logging.info(f"Image optimized: {original_size} bytes -> {optimized_size} bytes ({reduction_percent:.1f}% reduction)")
+        
+        return base64.b64encode(output_buffer.getvalue()).decode('utf-8')
+        
+    except Exception as e:
+        logging.error(f"Error optimizing image: {e}")
+        return None
+
+# Función para convertir imagen a base64 (mantenida para compatibilidad)
 def image_to_base64(image_path):
+    """Convierte imagen a base64 con optimización automática"""
     try:
         if os.path.exists(image_path):
-            with open(image_path, 'rb') as img_file:
-                return base64.b64encode(img_file.read()).decode('utf-8')
+            return optimize_image_base64(image_path)
         return None
     except Exception as e:
         logging.error(f"Error converting image to base64: {e}")
