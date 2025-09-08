@@ -1,0 +1,63 @@
+name: Build and Push Docker image
+on:
+  push:
+    branches: [ "main" ]   
+    tags:
+      - 'v*.*.*' # Se activa para tags semánticos como v1.0.0
+      - '*.*.*'  # Se activa para tags como 1.0.0
+      - '*.*'    # Se activa para tags como 1.0
+      - '*'      # Comodín para cualquier otro tag
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      # === LA LÓGICA CLAVE ESTÁ AQUÍ ===
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            # Prioridad 1: Si el evento es la publicación de un tag de Git.
+            # Crea una etiqueta de Docker con el mismo nombre EXACTO que el tag de Git.
+            # Ejemplo: Si creas el tag 'main-1.0', la imagen se etiquetará como 'main-1.0'.
+            type=ref,event=tag
+
+            # Prioridad 2: Si el evento ocurre en la rama por defecto ('main').
+            # Crea la etiqueta 'latest'.
+            # Esto se aplica tanto a un push directo a 'main' como a un tag que esté en 'main'.
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v5
+        continue-on-error: true
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
