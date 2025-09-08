@@ -25,9 +25,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.urandom(24)
 
-# Configura ProxyFix para confiar en las cabeceras de un proxy
+# Configura ProxyFix para confiar en las cabeceras de cualquier proxy (Cloudflare, nginx, etc.)
+# Permite múltiples proxies en cadena y es compatible con Cloudflare Tunnel
 app.wsgi_app = ProxyFix(
-    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+    app.wsgi_app, 
+    x_for=10,      # Permite hasta 10 proxies en cadena (Cloudflare + otros)
+    x_proto=10,    # Confía en X-Forwarded-Proto de múltiples proxies
+    x_host=10,     # Confía en X-Forwarded-Host de múltiples proxies
+    x_prefix=10,   # Confía en X-Forwarded-Prefix de múltiples proxies
+    x_port=10      # Confía en X-Forwarded-Port de múltiples proxies
 )
 
 # Security configuration
