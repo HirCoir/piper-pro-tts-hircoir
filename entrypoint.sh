@@ -21,7 +21,7 @@ fi
 # Iniciar la aplicación principal con reinicio automático
 echo "Iniciando aplicación..."
 while true; do
-    python3 adaptar.py
+    python3 app.py
     EXIT_CODE=$?
     
     if [ $EXIT_CODE -eq 0 ]; then
