@@ -851,12 +851,31 @@ def convert_text_to_speech_concurrent(text, default_model_name, settings):
     return final_output_mp3, error_message
 
 def get_client_ip():
-    """Get the real client IP address"""
-    if request.headers.get('X-Forwarded-For'):
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
-    elif request.headers.get('X-Real-IP'):
-        return request.headers.get('X-Real-IP')
-    return request.remote_addr
+    """Get the real client IP address, considering proxy headers"""
+    # Check various proxy headers in order of preference
+    forwarded_ips = [
+        request.headers.get('X-Forwarded-For'),
+        request.headers.get('X-Real-IP'),
+        request.headers.get('CF-Connecting-IP'),  # Cloudflare
+        request.headers.get('X-Client-IP'),
+        request.headers.get('X-Cluster-Client-IP'),
+        request.environ.get('HTTP_X_FORWARDED_FOR'),
+        request.environ.get('REMOTE_ADDR')
+    ]
+    
+    for ip_header in forwarded_ips:
+        if ip_header:
+            # Handle comma-separated IPs (proxy chain)
+            ip = ip_header.split(',')[0].strip()
+            if ip and ip != 'unknown':
+                try:
+                    # Validate IP address
+                    ipaddress.ip_address(ip)
+                    return ip
+                except ValueError:
+                    continue
+    
+    return request.remote_addr or '127.0.0.1'
 
 def is_private_ip(ip):
     """Check if IP is from private network"""
@@ -935,26 +954,44 @@ def validate_user_agent(user_agent):
     return True, None
 
 def validate_request_headers():
-    """Validate request headers for security"""
-    # Check for common automation headers
-    suspicious_headers = [
-        'x-requested-with', 'x-automation', 'x-test', 'x-bot',
+    """Validate request headers for security - proxy-friendly version"""
+    # Only check for obviously malicious automation headers
+    # Allow proxy headers that are common with Cloudflare, nginx, etc.
+    malicious_headers = [
+        'x-automation', 'x-test', 'x-bot',
         'selenium-remote-control', 'webdriver'
     ]
     
-    for header in suspicious_headers:
+    for header in malicious_headers:
         if request.headers.get(header):
             return False, f"Suspicious header detected: {header}"
     
-    # Check Content-Type for POST requests
+    # More lenient Content-Type validation for proxy environments
     if request.method == 'POST':
         content_type = request.headers.get('Content-Type', '')
-        if not content_type:
-            return False, "Missing Content-Type header"
         
-        # For /convert endpoint, expect form data
-        if request.endpoint == 'convert' and 'application/x-www-form-urlencoded' not in content_type:
-            return False, "Invalid Content-Type for web interface"
+        # Allow requests without Content-Type if they come through proxies
+        # Proxies sometimes strip or modify headers
+        if not content_type:
+            # Check if this looks like a proxy request
+            proxy_indicators = [
+                'CF-Ray', 'CF-Connecting-IP', 'X-Forwarded-For', 
+                'X-Real-IP', 'X-Forwarded-Proto'
+            ]
+            has_proxy_headers = any(request.headers.get(header) for header in proxy_indicators)
+            
+            if not has_proxy_headers:
+                return False, "Missing Content-Type header"
+        
+        # For /convert endpoint, be more flexible with Content-Type
+        if request.endpoint == 'convert' and content_type:
+            valid_types = [
+                'application/x-www-form-urlencoded',
+                'multipart/form-data',
+                'application/json'  # Allow JSON for API usage through proxies
+            ]
+            if not any(valid_type in content_type for valid_type in valid_types):
+                return False, "Invalid Content-Type for web interface"
     
     return True, None
 
