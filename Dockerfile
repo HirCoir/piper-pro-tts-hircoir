@@ -51,7 +51,7 @@ WORKDIR /home/app
 
 
 # Copy application files
-COPY --chown=app:app adaptar.py .
+COPY --chown=app:app app.py .
 COPY --chown=app:app download_models.py .
 COPY --chown=app:app entrypoint.sh .
 COPY --chown=app:app templates ./templates
