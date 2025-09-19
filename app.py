@@ -175,21 +175,21 @@ def load_models():
                             model_replacements = [tuple(item) for item in model_replacements]
                         
                         # Extract and save image if it exists
-                    image_url = None
-                    if 'image' in modelcard:
-                        image_url = extract_and_save_image(json_model_id, modelcard['image'])
-                    
-                    model_config = {
-                        "model_path_onnx": onnx_path,
-                        "replacements": model_replacements,
-                        "id": json_model_id,
-                        "name": modelcard.get('name') or json_model_id,
-                        "description": modelcard.get('description') or json_model_id,
-                        "language": modelcard.get('language', 'Not available'),
-                        "voiceprompt": modelcard.get('voiceprompt', 'Not available'),
-                        "filename_key": model_filename_key,
-                        "image": image_url  # Store the URL to the static image
-                    }
+                        image_url = None
+                        if 'image' in modelcard:
+                            image_url = extract_and_save_image(json_model_id, modelcard['image'])
+                        
+                        model_config = {
+                            "model_path_onnx": onnx_path,
+                            "replacements": model_replacements,
+                            "id": json_model_id,
+                            "name": modelcard.get('name') or json_model_id,
+                            "description": modelcard.get('description') or json_model_id,
+                            "language": modelcard.get('language', 'Not available'),
+                            "voiceprompt": modelcard.get('voiceprompt', 'Not available'),
+                            "filename_key": model_filename_key,
+                            "image": image_url  # Store the URL to the static image
+                        }
                         
                         # Store model config using filename-based key
                         model_configs[model_filename_key] = model_config
