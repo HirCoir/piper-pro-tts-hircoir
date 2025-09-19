@@ -10,7 +10,7 @@ import tempfile
 import shutil
 import base64
 import concurrent.futures
-from flask import Flask, request, jsonify, after_this_request, send_file, Response, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, after_this_request, send_file, Response, render_template, session, redirect, url_for, send_from_directory
 import math
 from werkzeug.middleware.proxy_fix import ProxyFix
 import io
@@ -22,8 +22,12 @@ load_dotenv()
 # Configuración del registro
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.urandom(24)
+
+# Ensure static directory exists
+static_images_dir = os.path.join('static', 'model_images')
+os.makedirs(static_images_dir, exist_ok=True)
 
 # Configura ProxyFix para confiar en las cabeceras de cualquier proxy (Cloudflare, nginx, etc.)
 # Permite múltiples proxies en cadena y es compatible con Cloudflare Tunnel
@@ -112,6 +116,34 @@ os.makedirs(temp_audio_folder, exist_ok=True)
 os.makedirs(model_folder, exist_ok=True)
 
 # Function to load models from individual .onnx.json files
+def extract_and_save_image(model_id, base64_image):
+    """Extract and save base64 image to static files."""
+    if not base64_image:
+        return None
+        
+    try:
+        # Extract image format and data from base64 string
+        if 'base64,' in base64_image:
+            header, data = base64_image.split('base64,', 1)
+            img_format = header.split('/')[-1].split(';')[0]
+        else:
+            data = base64_image
+            img_format = 'png'  # default format
+            
+        # Generate a safe filename
+        safe_model_id = re.sub(r'[^a-zA-Z0-9]', '_', model_id)
+        filename = f"{safe_model_id}_image.{img_format}"
+        filepath = os.path.join(static_images_dir, filename)
+        
+        # Save the image
+        with open(filepath, 'wb') as f:
+            f.write(base64.b64decode(data))
+            
+        return f'/static/model_images/{filename}'
+    except Exception as e:
+        logging.error(f"Error saving image for model {model_id}: {e}")
+        return None
+
 def load_models():
     global model_configs, existing_models, model_id_to_filename_map
     model_configs = {}
@@ -142,17 +174,22 @@ def load_models():
                         if model_replacements and isinstance(model_replacements[0], list):
                             model_replacements = [tuple(item) for item in model_replacements]
                         
-                        model_config = {
-                            "model_path_onnx": onnx_path,
-                            "replacements": model_replacements,
-                            "id": json_model_id,
-                            "name": modelcard.get('name') or json_model_id,
-                            "description": modelcard.get('description') or json_model_id,
-                            "language": modelcard.get('language', 'Not available'),
-                            "voiceprompt": modelcard.get('voiceprompt', 'Not available'),
-                            "filename_key": model_filename_key,
-                            "image": modelcard.get('image')  # Get base64 image from modelcard if present
-                        }
+                        # Extract and save image if it exists
+                    image_url = None
+                    if 'image' in modelcard:
+                        image_url = extract_and_save_image(json_model_id, modelcard['image'])
+                    
+                    model_config = {
+                        "model_path_onnx": onnx_path,
+                        "replacements": model_replacements,
+                        "id": json_model_id,
+                        "name": modelcard.get('name') or json_model_id,
+                        "description": modelcard.get('description') or json_model_id,
+                        "language": modelcard.get('language', 'Not available'),
+                        "voiceprompt": modelcard.get('voiceprompt', 'Not available'),
+                        "filename_key": model_filename_key,
+                        "image": image_url  # Store the URL to the static image
+                    }
                         
                         # Store model config using filename-based key
                         model_configs[model_filename_key] = model_config
@@ -194,11 +231,18 @@ def index():
             "image": model_config.get("image", "")
         })
     
-    return render_template('index.html', model_options=model_options)
+    # Get domain URL for OpenGraph tags
+    domain_url = request.url_root.rstrip('/')
+    return render_template('index.html', model_options=model_options, domain_url=domain_url)
 
 @app.route('/favicon.ico')
 def favicon():
     return send_file('templates/favicon.ico', mimetype='image/x-icon')
+
+# Serve static files for model images
+@app.route('/static/model_images/<path:filename>')
+def serve_model_image(filename):
+    return send_from_directory(static_images_dir, filename)
 
 @app.route('/og_image')
 def og_image():

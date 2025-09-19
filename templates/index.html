@@ -374,8 +374,16 @@
                         data-model-name="{{ model.name }}"
                         data-model-description="{{ model.description }}"
                         data-model-language="{{ model.language }}"
-                        data-model-image="{{ model.image }}">
-                        <img src="{{ model.image }}" alt="{{ model.name }}" class="w-full h-56 object-cover rounded-lg mb-3">
+                        data-model-image="{{ model.image or '' }}">
+                        <div class="w-full h-56 bg-gray-800 rounded-lg mb-3 overflow-hidden">
+                            {% if model.image %}
+                            <img src="{{ model.image }}" alt="{{ model.name }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center bg-gray-700">
+                                <i class="fas fa-robot text-5xl text-gray-500"></i>
+                            </div>
+                            {% endif %}
+                        </div>
                         <div class="space-y-1">
                             <h3 class="font-semibold text-gray-100">{{ model.name }}</h3>
                             <p class="text-sm text-gray-400">{{ model.description }}</p>
