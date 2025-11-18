@@ -23,39 +23,100 @@ jobs:
         id: increment
         run: |
           set -euo pipefail
+          
+          # Función para logging seguro
+          log_info() { echo "ℹ️  $1"; }
+          log_warn() { echo "⚠️  $1"; }
+          log_error() { echo "❌ $1"; }
+          log_success() { echo "✅ $1"; }
 
+          # Normalizar nombres a minúsculas
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
           API_URL="https://api.github.com/users/${OWNER}/packages/container/${REPO}/versions?per_page=100"
 
-          echo "Fetching existing container versions from GitHub Packages..."
-          RESPONSE=$(curl -fsSL \
+          log_info "Buscando versiones existentes en GitHub Packages..."
+          log_info "Owner: ${OWNER}, Repo: ${REPO}"
+
+          # Intentar obtener versiones con manejo de errores
+          HTTP_CODE=0
+          RESPONSE=""
+          
+          RESPONSE=$(curl -w "\n%{http_code}" -fsSL \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "$API_URL" || echo "")
+            "$API_URL" 2>/dev/null || echo -e "\n000")
+          
+          # Separar respuesta y código HTTP
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          RESPONSE=$(echo "$RESPONSE" | sed '$d')
 
-          TAGS=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]?' 2>/dev/null || echo "")
+          log_info "HTTP Status Code: ${HTTP_CODE}"
 
-          if [ -z "$TAGS" ]; then
-            echo "No existing tags found. Starting at 1.0"
+          # Validar respuesta de la API
+          if [ "$HTTP_CODE" = "404" ]; then
+            log_warn "Package no existe aún. Iniciando en versión 1.0"
+            NEW_VERSION="1.0"
+          elif [ "$HTTP_CODE" = "000" ] || [ -z "$HTTP_CODE" ] || [ "$HTTP_CODE" != "200" ]; then
+            log_warn "Error al consultar API (código: ${HTTP_CODE}). Iniciando en versión 1.0"
             NEW_VERSION="1.0"
           else
-            LATEST_VERSION=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+$' | sort -V | tail -n1)
-            if [ -z "$LATEST_VERSION" ]; then
-              echo "No numeric tags detected. Starting at 1.0"
+            log_success "Respuesta exitosa de la API"
+            
+            # Validar que la respuesta sea JSON válido
+            if ! echo "$RESPONSE" | jq empty 2>/dev/null; then
+              log_warn "Respuesta no es JSON válido. Iniciando en versión 1.0"
               NEW_VERSION="1.0"
             else
-              MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
-              MINOR=$(echo "$LATEST_VERSION" | cut -d. -f2)
-              NEW_MINOR=$((MINOR + 1))
-              NEW_VERSION="${MAJOR}.${NEW_MINOR}"
-              echo "Latest numeric tag: $LATEST_VERSION"
+              # Extraer tags con manejo de errores
+              TAGS=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]? // empty' 2>/dev/null | grep -v '^$' || echo "")
+              
+              if [ -z "$TAGS" ]; then
+                log_warn "No se encontraron tags. Iniciando en versión 1.0"
+                NEW_VERSION="1.0"
+              else
+                log_info "Tags encontrados:"
+                echo "$TAGS" | head -n 5 | sed 's/^/  - /'
+                [ $(echo "$TAGS" | wc -l) -gt 5 ] && echo "  ... (y más)"
+                
+                # Filtrar solo tags con formato numérico X.Y
+                NUMERIC_TAGS=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+$' || echo "")
+                
+                if [ -z "$NUMERIC_TAGS" ]; then
+                  log_warn "No se encontraron tags con formato numérico (X.Y). Iniciando en versión 1.0"
+                  NEW_VERSION="1.0"
+                else
+                  # Encontrar la versión más alta
+                  LATEST_VERSION=$(echo "$NUMERIC_TAGS" | sort -t. -k1,1n -k2,2n | tail -n1)
+                  
+                  if [ -z "$LATEST_VERSION" ]; then
+                    log_warn "Error al procesar versión más alta. Iniciando en versión 1.0"
+                    NEW_VERSION="1.0"
+                  else
+                    log_info "Última versión numérica encontrada: ${LATEST_VERSION}"
+                    
+                    # Incrementar versión de forma segura
+                    MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
+                    MINOR=$(echo "$LATEST_VERSION" | cut -d. -f2)
+                    
+                    # Validar que MAJOR y MINOR sean números
+                    if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]]; then
+                      log_warn "Versión con formato inválido. Iniciando en versión 1.0"
+                      NEW_VERSION="1.0"
+                    else
+                      NEW_MINOR=$((MINOR + 1))
+                      NEW_VERSION="${MAJOR}.${NEW_MINOR}"
+                      log_info "Incrementando versión: ${LATEST_VERSION} → ${NEW_VERSION}"
+                    fi
+                  fi
+                fi
+              fi
             fi
           fi
 
-          echo "Using new version: $NEW_VERSION"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          log_success "Nueva versión a utilizar: ${NEW_VERSION}"
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: get-next-version
@@ -85,11 +146,12 @@ jobs:
           flavor: |
             latest=auto
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (AMD64 only)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -97,14 +159,40 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build Summary
+        if: success()
         run: |
           IMAGE_FULL=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           
-          echo "🚀 Build completed successfully!"
-          echo "🏷️ Version: ${{ needs.get-next-version.outputs.version }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Build completado exitosamente!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo ""
-          echo "📦 Images pushed:"
-          echo "  - ${IMAGE_FULL}:${{ needs.get-next-version.outputs.version }}"
-          echo "  - ${IMAGE_FULL}:latest"
+          echo "📋 Información del Build:"
+          echo "  🏷️  Versión: ${{ needs.get-next-version.outputs.version }}"
+          echo "  🏗️  Plataforma: linux/amd64"
+          echo "  📦 Repositorio: ${{ github.repository }}"
           echo ""
-          echo "✅ Image is ready to use!"
+          echo "📦 Imágenes publicadas:"
+          echo "  • ${IMAGE_FULL}:${{ needs.get-next-version.outputs.version }}"
+          echo "  • ${IMAGE_FULL}:latest"
+          echo ""
+          echo "🐳 Comando para usar la imagen:"
+          echo "  docker pull ${IMAGE_FULL}:${{ needs.get-next-version.outputs.version }}"
+          echo ""
+          echo "✅ ¡Imagen lista para usar!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      - name: Build Summary (On Failure)
+        if: failure()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ El build falló"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "🔍 Revisa los logs anteriores para más detalles"
+          echo "💡 Verifica que:"
+          echo "  • El Dockerfile existe y es válido"
+          echo "  • Los permisos de GitHub Packages están correctos"
+          echo "  • El token GITHUB_TOKEN tiene permisos de escritura"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
