@@ -1,0 +1,108 @@
+name: Build and Push Nova Docker Image
+
+on:
+  workflow_dispatch: # Permite ejecución manual desde GitHub Actions
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  get-next-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.increment.outputs.version }}
+    steps:
+      - name: Get latest version and increment
+        id: increment
+        run: |
+          set -euo pipefail
+
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          API_URL="https://api.github.com/users/${OWNER}/packages/container/${REPO}/versions?per_page=100"
+
+          echo "Fetching existing container versions from GitHub Packages..."
+          RESPONSE=$(curl -fsSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$API_URL" || echo "")
+
+          TAGS=$(echo "$RESPONSE" | jq -r '.[].metadata.container.tags[]?' 2>/dev/null || echo "")
+
+          if [ -z "$TAGS" ]; then
+            echo "No existing tags found. Starting at 1.0"
+            NEW_VERSION="1.0"
+          else
+            LATEST_VERSION=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+$' | sort -V | tail -n1)
+            if [ -z "$LATEST_VERSION" ]; then
+              echo "No numeric tags detected. Starting at 1.0"
+              NEW_VERSION="1.0"
+            else
+              MAJOR=$(echo "$LATEST_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$LATEST_VERSION" | cut -d. -f2)
+              NEW_MINOR=$((MINOR + 1))
+              NEW_VERSION="${MAJOR}.${NEW_MINOR}"
+              echo "Latest numeric tag: $LATEST_VERSION"
+            fi
+          fi
+
+          echo "Using new version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: get-next-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ needs.get-next-version.outputs.version }}
+            type=raw,value=latest
+          flavor: |
+            latest=auto
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Summary
+        run: |
+          IMAGE_FULL=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          
+          echo "🚀 Build completed successfully!"
+          echo "🏷️ Version: ${{ needs.get-next-version.outputs.version }}"
+          echo ""
+          echo "📦 Images pushed:"
+          echo "  - ${IMAGE_FULL}:${{ needs.get-next-version.outputs.version }}"
+          echo "  - ${IMAGE_FULL}:latest"
+          echo ""
+          echo "✅ Image is ready to use!"
