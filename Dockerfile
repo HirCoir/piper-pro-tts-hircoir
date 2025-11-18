@@ -54,6 +54,8 @@ WORKDIR /home/app
 COPY --chown=app:app app.py .
 COPY --chown=app:app download_models.py .
 COPY --chown=app:app entrypoint.sh .
+# Ensure the entrypoint has the correct line endings
+RUN sed -i 's/\r$//' entrypoint.sh
 COPY --chown=app:app templates ./templates
 COPY --chown=app:app global_replacements.json .
 COPY --chown=app:app Dockerfile .
