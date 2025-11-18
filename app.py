@@ -248,6 +248,10 @@ def serve_model_image(filename):
 def og_image():
     return send_file('templates/image.jpg', mimetype='image/jpeg')
 
+@app.route('/dist/<path:path>')
+def serve_dist(path):
+    return send_from_directory(os.path.join(app.static_folder, 'dist'), path)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
