@@ -1,4 +1,4 @@
-name: Build and Push Nova Docker Image
+name: Build and Push
 
 on:
   workflow_dispatch: # Permite ejecución manual desde GitHub Actions
@@ -14,6 +14,8 @@ env:
 jobs:
   get-next-version:
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     outputs:
       version: ${{ steps.increment.outputs.version }}
     steps:
